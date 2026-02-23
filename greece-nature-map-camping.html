@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Greece Nature Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --olive: #4a5c2f;
+      --olive-light: #6b7f45;
+      --sea: #1a6b8a;
+      --sea-light: #2d8faf;
+      --sand: #f5f0e8;
+      --sand-dark: #e8e0d0;
+      --terracotta: #c46a3a;
+      --text: #1e1e1e;
+      --text-muted: #5a5a5a;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--sand);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--olive);
+      color: var(--white);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    .header-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .header-subtitle {
+      font-size: 0.75rem;
+      opacity: 0.75;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .header-badge {
+      background: var(--terracotta);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    /* LAYOUT */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR */
+    aside {
+      width: 320px;
+      flex-shrink: 0;
+      background: var(--white);
+      overflow-y: auto;
+      border-right: 1px solid var(--sand-dark);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 16px 20px 12px;
+      background: var(--sand);
+      border-bottom: 1px solid var(--sand-dark);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .sidebar-header h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      color: var(--olive);
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-tab {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all 0.2s;
+      background: var(--white);
+      color: var(--text-muted);
+      border-color: var(--sand-dark);
+    }
+
+    .filter-tab:hover, .filter-tab.active {
+      background: var(--olive);
+      color: white;
+      border-color: var(--olive);
+    }
+
+    .filter-tab.camping-tab:hover, .filter-tab.camping-tab.active {
+      background: var(--terracotta);
+      border-color: var(--terracotta);
+    }
+
+    .filter-tab.beach-tab:hover, .filter-tab.beach-tab.active {
+      background: var(--sea);
+      border-color: var(--sea);
+    }
+
+    /* BEACH popup header */
+    .popup-header.beach-header {
+      background: var(--sea);
+    }
+
+    .beach-badge {
+      display: inline-block;
+      background: var(--sea);
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* CAMPING SPECIFIC STYLES */
+    .camping-badge {
+      display: inline-block;
+      background: var(--terracotta);
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .rating-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .rating-pill {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.68rem;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #fff8f0;
+      border: 1px solid #f0d8c0;
+      color: #8a4a00;
+    }
+
+    .rating-pill .stars {
+      color: #f5a623;
+    }
+
+    .services-row {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .service-icon {
+      font-size: 0.9rem;
+      title: attr(title);
+    }
+
+    /* Popup camping styles */
+    .popup-rating-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 7px;
+      flex-wrap: wrap;
+    }
+
+    .popup-rating-pill {
+      font-size: 0.67rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 8px;
+      background: #fff5e6;
+      border: 1px solid #f0c080;
+      color: #7a3e00;
+    }
+
+    .popup-services {
+      margin-top: 6px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .popup-services-title {
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .popup-service-icons {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .popup-header.camping-header {
+      background: var(--terracotta);
+    }
+
+    .place-list { padding: 8px 0; }
+
+    .place-card {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--sand);
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .place-card:hover { background: var(--sand); }
+    .place-card.selected { background: #e8f0da; border-left: 3px solid var(--olive-light); }
+
+    .place-icon {
+      font-size: 1.4rem;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .place-info { flex: 1; }
+
+    .place-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .place-region {
+      font-size: 0.7rem;
+      color: var(--sea);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 2px;
+    }
+
+    .place-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .place-tags {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: var(--sand);
+      color: var(--text-muted);
+      border: 1px solid var(--sand-dark);
+    }
+
+    /* MAP */
+    #map {
+      flex: 1;
+      z-index: 1;
+    }
+
+    /* POPUP */
+    .custom-popup .leaflet-popup-content-wrapper {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      border: none;
+      font-family: 'DM Sans', sans-serif;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .custom-popup .leaflet-popup-content {
+      margin: 0;
+      width: 240px !important;
+    }
+
+    .popup-header {
+      background: var(--olive);
+      color: white;
+      padding: 12px 14px;
+    }
+
+    .popup-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .popup-region {
+      font-size: 0.68rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 1px;
+    }
+
+    .popup-body { padding: 10px 14px 12px; }
+
+    .popup-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .popup-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .popup-best {
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: var(--terracotta);
+      font-weight: 500;
+    }
+
+    /* Leaflet overrides */
+    .leaflet-popup-tip { background: var(--olive); }
+
+    /* Scrollbar */
+    aside::-webkit-scrollbar { width: 4px; }
+    aside::-webkit-scrollbar-track { background: transparent; }
+    aside::-webkit-scrollbar-thumb { background: var(--sand-dark); border-radius: 4px; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      aside { width: 100%; position: absolute; bottom: 0; height: 40vh; z-index: 500; border-right: none; border-top: 2px solid var(--sand-dark); }
+      .app-body { flex-direction: column; }
+      #map { height: 60vh; }
+    }
+
+    /* Focus states WCAG */
+    .place-card:focus { outline: 2px solid var(--olive); outline-offset: -2px; }
+    .filter-tab:focus { outline: 2px solid var(--sea); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-title">🇬🇷 Greece Nature Guide</div>
+    <div class="header-subtitle">13 natural wonders · 10 camping sites · 8 Sithonia beaches</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px">
+    <a href="mailto:vla@getkiara.com" style="color:white; font-size:0.78rem; font-weight:400; opacity:0.85; text-decoration:none; letter-spacing:0.03em; border:1px solid rgba(255,255,255,0.35); padding:4px 12px; border-radius:20px; transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85">✉ vla@getkiara.com</a>
+    <span class="header-badge">OpenStreetMap</span>
+  </div>
+</header>
+
+<div class="app-body">
+  <aside aria-label="Places list">
+    <div class="sidebar-header">
+      <h2>Natural Wonders</h2>
+      <div class="filter-tabs" role="group" aria-label="Filter by type">
+        <button class="filter-tab active" onclick="filterPlaces('all', this)">All</button>
+        <button class="filter-tab" onclick="filterPlaces('gorge', this)">Gorge</button>
+        <button class="filter-tab" onclick="filterPlaces('marine', this)">Marine</button>
+        <button class="filter-tab" onclick="filterPlaces('mountain', this)">Mountain</button>
+        <button class="filter-tab" onclick="filterPlaces('cave', this)">Cave</button>
+        <button class="filter-tab" onclick="filterPlaces('wetland', this)">Wetland</button>
+        <button class="filter-tab beach-tab" onclick="filterPlaces('beach', this)">🏖️ Sithonia Beaches</button>
+        <button class="filter-tab camping-tab" onclick="filterPlaces('camping', this)">⛺ Camping</button>
+      </div>
+    </div>
+    <div class="place-list" id="placeList" role="list"></div>
+  </aside>
+
+  <main id="map" role="main" aria-label="Greece nature map"></main>
+</div>
+
+<script>
+const places = [
+  {
+    id: 1, name: "Meteora", region: "Thessaly, Central Greece",
+    lat: 39.7217, lng: 21.6306,
+    icon: "🏔️",
+    desc: "UNESCO-listed rock pillars crowned with ancient monasteries. One of the most dramatic landscapes in Europe.",
+    tags: ["UNESCO", "Rock formations", "Monasteries"],
+    type: "mountain",
+    best: "Best: Apr–Jun, Sep–Oct"
+  },
+  {
+    id: 2, name: "Vikos Gorge", region: "Epirus",
+    lat: 39.8906, lng: 20.7478,
+    icon: "🏞️",
+    desc: "One of the world's deepest gorges. The Voidomatis river carves through Pindus mountains — superb trekking.",
+    tags: ["Hiking", "Gorge", "River"],
+    type: "gorge",
+    best: "Best: May–Oct"
+  },
+  {
+    id: 3, name: "Samaria Gorge", region: "Crete",
+    lat: 35.2954, lng: 23.9707,
+    icon: "🏞️",
+    desc: "Europe's longest gorge at 16km. A full-day hike through wild Cretan landscape ending at the Libyan Sea.",
+    tags: ["Hiking", "Gorge", "National Park"],
+    type: "gorge",
+    best: "Best: May–Oct (closes in winter)"
+  },
+  {
+    id: 4, name: "Balos Lagoon", region: "Crete",
+    lat: 35.5986, lng: 23.5747,
+    icon: "🏖️",
+    desc: "Surreal turquoise lagoon at the tip of Gramvousa peninsula. Shallow warm water, flamingos in spring.",
+    tags: ["Lagoon", "Flamingos", "Beach"],
+    type: "marine",
+    best: "Best: Apr–Oct"
+  },
+  {
+    id: 5, name: "Navagio (Shipwreck Beach)", region: "Zakynthos",
+    lat: 37.8612, lng: 20.6242,
+    icon: "🚢",
+    desc: "Iconic wrecked ship on white pebbles enclosed by towering white limestone cliffs. Boat-access only.",
+    tags: ["Beach", "Cliffs", "Iconic"],
+    type: "marine",
+    best: "Best: Jun–Sep"
+  },
+  {
+    id: 6, name: "Melissani Cave", region: "Kefalonia",
+    lat: 38.2613, lng: 20.6278,
+    icon: "🕳️",
+    desc: "Collapsed cave with an underground lake. Brilliant blue light filters through the roof at noon — magical.",
+    tags: ["Cave", "Lake", "Underground"],
+    type: "cave",
+    best: "Best: Apr–Oct (best light at noon)"
+  },
+  {
+    id: 7, name: "Prespa Lakes", region: "Northern Greece",
+    lat: 40.7747, lng: 21.0714,
+    icon: "🦢",
+    desc: "Transboundary lakes shared with Albania and North Macedonia. Home to Dalmatian pelicans and rare waterbirds.",
+    tags: ["Lakes", "Birdwatching", "Wildlife"],
+    type: "wetland",
+    best: "Best: Apr–Jun (nesting season)"
+  },
+  {
+    id: 8, name: "Dadia Forest", region: "Thrace",
+    lat: 41.0861, lng: 26.1978,
+    icon: "🦅",
+    desc: "Europe's best raptor sanctuary. Black vultures, Egyptian vultures, and imperial eagles nest here.",
+    tags: ["Birdwatching", "Forest", "Wildlife"],
+    type: "wetland",
+    best: "Best: Apr–Sep"
+  },
+  {
+    id: 9, name: "Olympus National Park", region: "Central Macedonia",
+    lat: 40.0864, lng: 22.3583,
+    icon: "⛰️",
+    desc: "Greece's highest peak at 2,917m. Greece's first national park — dense forests, wildflowers, and rare flora.",
+    tags: ["Hiking", "Summit", "National Park"],
+    type: "mountain",
+    best: "Best: Jun–Sep"
+  },
+  {
+    id: 10, name: "Ionian Marine Park", region: "Zakynthos",
+    lat: 37.7553, lng: 20.9060,
+    icon: "🐢",
+    desc: "Protected nesting ground for loggerhead sea turtles (Caretta caretta). Snorkeling with sea turtles is possible.",
+    tags: ["Sea turtles", "Marine park", "Snorkeling"],
+    type: "marine",
+    best: "Best: Jun–Aug (nesting)"
+  },
+  {
+    id: 11, name: "Diros Caves", region: "Mani, Peloponnese",
+    lat: 36.6350, lng: 22.3898,
+    icon: "🚣",
+    desc: "Underground river caves explored by boat. Stalactites and stalagmites reflected in still dark water.",
+    tags: ["Cave", "Boat tour", "Stalactites"],
+    type: "cave",
+    best: "Best: Year-round (book ahead)"
+  },
+  {
+    id: 12, name: "Halkidiki Coast", region: "Central Macedonia",
+    lat: 40.0100, lng: 23.6500,
+    icon: "🌊",
+    desc: "Three peninsulas of pine forests descending to crystalline sea. Sithonia is the most unspoiled.",
+    tags: ["Beach", "Pine forest", "Crystal water"],
+    type: "marine",
+    best: "Best: Jun–Sep"
+  },
+  {
+    id: 13, name: "Nestos Gorge", region: "Eastern Macedonia",
+    lat: 41.2050, lng: 24.4300,
+    icon: "🌿",
+    desc: "Wild river gorge with lush riparian forest. Canoeing, hiking, and rich biodiversity — largely undiscovered.",
+    tags: ["Gorge", "River", "Canoeing"],
+    type: "gorge",
+    best: "Best: May–Oct"
+  }
+];
+
+const campingPlaces = [
+  {
+    id: 101, name: "Camping Erodios", region: "Gialova, Messenia, Peloponnese",
+    lat: 36.9681, lng: 21.6733,
+    icon: "⛺",
+    desc: "One of Greece's finest campsites, perched on the stunning Navarino Bay near Pylos. Sandy beach with free sunbeds, olive-grove shade, and superb access to Voidokilia beach and the lagoon nature reserve.",
+    tags: ["Beachfront", "Olive grove", "Nature reserve nearby"],
+    type: "camping",
+    best: "Best: Apr–Oct",
+    googleRating: 4.5,
+    tripRating: 4.5,
+    ratingCount: "200+",
+    services: [
+      { icon: "🍽️", label: "Restaurant" },
+      { icon: "🛒", label: "Mini-market" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🏖️", label: "Private beach" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🐕", label: "Pets allowed" },
+      { icon: "🏕️", label: "Tent & caravan pitches" }
+    ]
+  },
+  {
+    id: 102, name: "Maragas Beach Village", region: "Agia Anna, Naxos, Cyclades",
+    lat: 37.0213, lng: 25.3686,
+    icon: "⛺",
+    desc: "Legendary beachside camping on Naxos between Agia Anna and Plaka beach — the longest beach in the Cyclades. Lush, shaded grounds with supermarket, bar, restaurant and free port transfer.",
+    tags: ["Beachfront", "Cyclades island", "Free port transfer"],
+    type: "camping",
+    best: "Best: May–Oct",
+    googleRating: 4.2,
+    tripRating: 4.0,
+    ratingCount: "155+",
+    services: [
+      { icon: "🍽️", label: "Restaurant & bar" },
+      { icon: "🛒", label: "Supermarket" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "👕", label: "Laundry" },
+      { icon: "🚿", label: "24h hot showers" },
+      { icon: "🐕", label: "Pets allowed" },
+      { icon: "🚐", label: "Free port transfer" }
+    ]
+  },
+  {
+    id: 103, name: "Plaka Camping", region: "Plaka Beach, Naxos, Cyclades",
+    lat: 36.9870, lng: 25.3572,
+    icon: "⛺",
+    desc: "Small, family-run campsite steps from the spectacular 7km Plaka beach. Beautiful pool, excellent restaurant, well-stocked shop, and shaded pitches. Free minibus transfer from Naxos port.",
+    tags: ["Beachfront", "Family-run", "Swimming pool"],
+    type: "camping",
+    best: "Best: May–Oct",
+    googleRating: 4.3,
+    tripRating: 4.0,
+    ratingCount: "120+",
+    services: [
+      { icon: "🍽️", label: "Restaurant" },
+      { icon: "🛒", label: "Shop" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🏊", label: "Swimming pool" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🚐", label: "Free port transfer" },
+      { icon: "👕", label: "Laundry" }
+    ]
+  },
+  {
+    id: 104, name: "Delphi Camping", region: "Delphi, Central Greece",
+    lat: 38.4819, lng: 22.4885,
+    icon: "⛺",
+    desc: "Dramatically located mountain campsite just 4km from ancient Delphi, with breathtaking views over the Gulf of Corinth and the Itea valley. Outdoor pool, olive grove, and family-owned with excellent hospitality.",
+    tags: ["Mountain views", "Historic site nearby", "Swimming pool"],
+    type: "camping",
+    best: "Best: Apr–Oct",
+    googleRating: 4.4,
+    tripRating: 4.5,
+    ratingCount: "180+",
+    services: [
+      { icon: "🍽️", label: "Restaurant" },
+      { icon: "🛒", label: "Mini-market" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🏊", label: "Swimming pool" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🫒", label: "Local olive oil shop" }
+    ]
+  },
+  {
+    id: 105, name: "Thalatta Kalamitsi Village", region: "Sithonia, Halkidiki",
+    lat: 39.9780, lng: 23.7950,
+    icon: "⛺",
+    desc: "Award-winning campsite on a stunning Sithonia peninsula cove in Halkidiki. Private beach, crystal water, pine forest shade, and bungalows available. Consistently rated among Greece's best.",
+    tags: ["Pine forest", "Private beach", "Bungalows available"],
+    type: "camping",
+    best: "Best: Jun–Sep",
+    googleRating: 4.5,
+    tripRating: 4.3,
+    ratingCount: "45+",
+    services: [
+      { icon: "🍽️", label: "Restaurant & beach bar" },
+      { icon: "🛒", label: "Supermarket" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🏖️", label: "Private beach" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🛖", label: "Bungalows" }
+    ]
+  },
+  {
+    id: 106, name: "Camping Triton II", region: "Drepano, Nafplio, Argolis, Peloponnese",
+    lat: 37.5333, lng: 22.8983,
+    icon: "⛺",
+    desc: "Exceptional, well-organized campsite near Nafplio with French-style hedged individual pitches, a private beach, and excellent facilities. Perfect base for exploring the ancient sites of Argolida.",
+    tags: ["Nafplio nearby", "Individual pitches", "Private beach"],
+    type: "camping",
+    best: "Best: Apr–Oct",
+    googleRating: 4.4,
+    tripRating: 4.5,
+    ratingCount: "100+",
+    services: [
+      { icon: "🍽️", label: "Restaurant & bar" },
+      { icon: "🛒", label: "Mini-market" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🏖️", label: "Private beach" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🐕", label: "Pets allowed" },
+      { icon: "🛝", label: "Children's playground" }
+    ]
+  },
+  {
+    id: 107, name: "Camping Nopigia", region: "Chania, Crete",
+    lat: 35.5233, lng: 23.7033,
+    icon: "⛺",
+    desc: "Charming campsite a few metres from Nopigia beach in Chania, set in blossomed gardens. Features a pool with a children's section, poolside snack bar, and excellent hosts. Near Falasarna and Balos.",
+    tags: ["Beachfront", "Swimming pool", "Near Balos & Falasarna"],
+    type: "camping",
+    best: "Best: Apr–Oct",
+    googleRating: 4.3,
+    tripRating: 4.5,
+    ratingCount: "90+",
+    services: [
+      { icon: "🛒", label: "Snack bar" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🏊", label: "Pool with kids' section" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🏕️", label: "Tent & caravan pitches" }
+    ]
+  },
+  {
+    id: 108, name: "Camping Paleokastritsa", region: "Paleokastritsa, Corfu, Ionian Islands",
+    lat: 39.6607, lng: 19.7104,
+    icon: "⛺",
+    desc: "Family-run hillside campsite in stunning Paleokastritsa, Corfu, 800m from the beach. Well-marked hiking trails, snorkeling coves, and a warm, welcoming family atmosphere.",
+    tags: ["Corfu island", "Hiking trails", "Snorkeling"],
+    type: "camping",
+    best: "Best: Apr–Oct",
+    googleRating: 4.2,
+    tripRating: 4.5,
+    ratingCount: "80+",
+    services: [
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🏕️", label: "Tent pitches" },
+      { icon: "🥾", label: "Marked hiking trails" }
+    ]
+  },
+  {
+    id: 109, name: "Camping Elizabeth", region: "Rethymno, Crete",
+    lat: 35.3742, lng: 24.4915,
+    icon: "⛺",
+    desc: "Popular Cretan campsite just 10m from Mysiria beach and 3km from Rethymno's Venetian harbour. Offers a taverna, snack bar and free WiFi. A great base for exploring western Crete.",
+    tags: ["Beachfront", "Near Rethymno town", "Crete"],
+    type: "camping",
+    best: "Best: May–Oct",
+    googleRating: 4.1,
+    tripRating: 4.0,
+    ratingCount: "70+",
+    services: [
+      { icon: "🍽️", label: "Taverna & snack bar" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🏕️", label: "Tent & caravan pitches" }
+    ]
+  },
+  {
+    id: 110, name: "Camping Bekas", region: "Ancient Olympia, Peloponnese",
+    lat: 37.6380, lng: 21.6252,
+    icon: "⛺",
+    desc: "Welcoming campsite near the birthplace of the Olympic Games. Shaded olive-grove pitches, clean facilities, and just a short walk from the ancient site of Olympia. Excellent value.",
+    tags: ["Near Ancient Olympia", "Olive grove", "Historic"],
+    type: "camping",
+    best: "Best: Apr–Oct",
+    googleRating: 4.2,
+    tripRating: 4.0,
+    ratingCount: "85+",
+    services: [
+      { icon: "🍽️", label: "Restaurant" },
+      { icon: "🛒", label: "Mini-market" },
+      { icon: "📶", label: "Free WiFi" },
+      { icon: "🔌", label: "Electric hookups" },
+      { icon: "🏊", label: "Swimming pool" },
+      { icon: "🚿", label: "Hot showers" },
+      { icon: "🐕", label: "Pets allowed" }
+    ]
+  }
+];
+
+const sithoniaBeaches = [
+  {
+    id: 201, name: "Kavourotrypes (Orange Beach)", region: "Near Sarti, Sithonia, Halkidiki",
+    lat: 40.0668, lng: 23.9185,
+    icon: "🏖️",
+    desc: "Arguably Sithonia's most spectacular beach — hidden pine-fringed coves with blindingly turquoise water. Reached via a short dirt road through forest. Several small coves, some with beach bars. Outstanding for snorkeling.",
+    tags: ["Hidden coves", "Pine forest", "Snorkeling", "Iconic"],
+    type: "beach",
+    best: "Best: Jun–Sep (go early)",
+    googleRating: 4.8,
+    tripRating: 4.5,
+    character: "🌿 Wild & scenic",
+    organised: "Partly",
+    features: ["🤿 Snorkeling", "🅿️ Forest parking", "🍹 Beach bar (some coves)", "🐠 Marine life"]
+  },
+  {
+    id: 202, name: "Karidi Beach", region: "Vourvourou, Sithonia, Halkidiki",
+    lat: 40.1120, lng: 23.8850,
+    icon: "🏖️",
+    desc: "A stunning sheltered aquamarine bay with incredibly shallow, crystal-clear water. Adults can wade 50m before reaching waist depth — essentially a giant natural pool. Always busy but undeniably beautiful.",
+    tags: ["Shallow water", "Family favourite", "Aquamarine bay"],
+    type: "beach",
+    best: "Best: Jun–Sep",
+    googleRating: 4.7,
+    tripRating: 4.5,
+    character: "👨‍👩‍👧 Family-perfect",
+    organised: "Unorganised",
+    features: ["🍽️ Nearby restaurant", "🏊 Shallow & safe", "⛵ Boat access from Vourvourou", "🅿️ Parking nearby"]
+  },
+  {
+    id: 203, name: "Kalamitsi Beach", region: "Southern tip of Sithonia, Halkidiki",
+    lat: 39.9430, lng: 23.8950,
+    icon: "🏖️",
+    desc: "A beautiful medium-sized beach at Sithonia's southern tip with soft sand, calm exotic waters and small coves. Well organised with trendy beach bars, watersports, and scuba diving. Great for families and active travellers.",
+    tags: ["Organised", "Scuba diving", "Blue Flag", "Watersports"],
+    type: "beach",
+    best: "Best: May–Oct",
+    googleRating: 4.5,
+    tripRating: 4.5,
+    character: "🤿 Active & organised",
+    organised: "Well organised",
+    features: ["🍽️ Restaurants & bars", "🤿 Scuba diving", "🚣 Canoe & paddleboat rental", "☂️ Sunbeds & umbrellas", "🅿️ Parking"]
+  },
+  {
+    id: 204, name: "Toroni Beach", region: "Toroni village, Sithonia, Halkidiki",
+    lat: 39.9988, lng: 23.8563,
+    icon: "🏖️",
+    desc: "One of Sithonia's longest beaches, over 2km of soft golden sand. A certified Blue Flag beach with shallow, calm waters. Colourful fishing boats add charm. Ideal for long walks and families. Byzantine castle ruins nearby.",
+    tags: ["Blue Flag", "Long sandy beach", "Fishing village"],
+    type: "beach",
+    best: "Best: May–Oct",
+    googleRating: 4.4,
+    tripRating: 4.5,
+    character: "🚶 Spacious & tranquil",
+    organised: "Partly",
+    features: ["🏖️ 2km+ of sand", "☂️ Sunbeds available", "🍽️ Tavernas nearby", "🅿️ Parking", "🏛️ Byzantine castle nearby"]
+  },
+  {
+    id: 205, name: "Trani Ammouda", region: "Ormos Panagias, Sithonia, Halkidiki",
+    lat: 40.2135, lng: 23.8330,
+    icon: "🏖️",
+    desc: "One of the largest expanses of sand in all of Sithonia — quiet, exotic and peaceful. Very shallow with a sandy bottom, perfect for families with small children. Rarely overcrowded. A Blue Flag certified hidden gem.",
+    tags: ["Blue Flag", "Quiet & spacious", "Shallow water", "Family"],
+    type: "beach",
+    best: "Best: May–Sep",
+    googleRating: 4.5,
+    tripRating: 4.0,
+    character: "😌 Peaceful & spacious",
+    organised: "Partly",
+    features: ["🏖️ Huge sandy expanse", "🏊 Very shallow water", "🅿️ Parking", "⛵ Boat hire nearby"]
+  },
+  {
+    id: 206, name: "Armenistis Beach", region: "Armenistis, Sithonia, Halkidiki",
+    lat: 40.0222, lng: 23.9445,
+    icon: "🏖️",
+    desc: "One of Halkidiki's most alluring beaches — fine white sand, turquoise water, and dense pine forest descending almost to the shoreline. Semi-organised with a beach bar, yet still feels secluded and wild.",
+    tags: ["Pine forest", "Fine white sand", "Semi-secluded", "Scenic"],
+    type: "beach",
+    best: "Best: Jun–Sep",
+    googleRating: 4.6,
+    tripRating: 4.5,
+    character: "🌲 Wild & romantic",
+    organised: "Partly",
+    features: ["🌲 Pine forest shade", "🍹 Beach bar", "☂️ Some sunbeds", "🤿 Good snorkeling", "🅿️ Forest parking"]
+  },
+  {
+    id: 207, name: "Vourvourou & Diaporos Island", region: "Vourvourou Bay, Sithonia, Halkidiki",
+    lat: 40.1300, lng: 23.8700,
+    icon: "🏝️",
+    desc: "A sheltered bay dotted with 9 tiny islands. Rent a boat to discover hidden coves, the Blue Lagoon with white sands, and Myrsini beach on Diaporos. The water here is the clearest and bluest in all of Sithonia.",
+    tags: ["Boat exploration", "Blue Lagoon", "Island hopping", "Crystal water"],
+    type: "beach",
+    best: "Best: Jun–Sep",
+    googleRating: 4.7,
+    tripRating: 4.5,
+    character: "⛵ Explorer's paradise",
+    organised: "Boat rental",
+    features: ["⛵ Boat hire (€120+/day)", "🏝️ 9 islands to discover", "💙 Blue Lagoon", "🤿 Snorkeling", "🍽️ Tavernas in Vourvourou"]
+  },
+  {
+    id: 208, name: "Tristinika Beach", region: "Near Neos Marmaras, Sithonia, Halkidiki",
+    lat: 40.0530, lng: 23.8040,
+    icon: "🏖️",
+    desc: "A beautiful, laid-back beach beloved by locals and alternative travellers. Surrounded by pine trees with a legendary beach bar for stunning sunsets and a relaxed atmosphere. Crystal Aegean waters and great vibes.",
+    tags: ["Sunsets", "Local favourite", "Beach bar", "Pine-fringed"],
+    type: "beach",
+    best: "Best: Jun–Sep",
+    googleRating: 4.4,
+    tripRating: 4.0,
+    character: "🌅 Sunset & chill vibes",
+    organised: "Partly",
+    features: ["🌅 Famous sunsets", "🍹 Ethnic beach bar", "🌲 Pine shade", "🏊 Clear water", "🅿️ Parking"]
+  }
+];
+
+// Combine all places
+const allPlaces = [...places, ...campingPlaces, ...sithoniaBeaches];
+
+// Map init
+const map = L.map('map', { zoomControl: true }).setView([39.0, 22.5], 6);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18
+}).addTo(map);
+
+let activeCard = null;
+let activeMarker = null;
+const markers = {};
+let currentFilter = 'all';
+
+function makeIcon(emoji, highlight = false, isCamping = false, isBeach = false) {
+  return L.divIcon({
+    html: `<div style="
+      font-size: ${highlight ? '28px' : '22px'};
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,${isCamping || isBeach ? '0.45' : '0.3'}));
+      transform: ${highlight ? 'scale(1.3)' : 'scale(1)'};
+      transition: all 0.2s;
+      cursor: pointer;
+      ${isCamping ? 'background: rgba(196,106,58,0.18); border-radius: 50%; padding: 2px;' : ''}
+      ${isBeach ? 'background: rgba(26,107,138,0.18); border-radius: 50%; padding: 2px;' : ''}
+    ">${emoji}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    className: ''
+  });
+}
+
+function starsHtml(rating) {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.25 && rating % 1 < 0.75 ? 1 : 0;
+  const empty = 5 - full - half;
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+}
+
+function makePopupHTML(p) {
+  if (p.type === 'camping') {
+    const avg = ((p.googleRating + p.tripRating) / 2).toFixed(1);
+    const servicesHTML = p.services.map(s =>
+      `<span title="${s.label}" style="font-size:1rem; cursor:default;" title="${s.label}">${s.icon}</span>`
+    ).join('');
+    return `
+      <div class="popup-header camping-header">
+        <div class="popup-name">${p.icon} ${p.name}</div>
+        <div class="popup-region">${p.region}</div>
+      </div>
+      <div class="popup-body">
+        <div class="popup-desc">${p.desc}</div>
+        <div class="popup-rating-row">
+          <span class="popup-rating-pill">🟡 Google ${p.googleRating} <span style="color:#f5a623">${starsHtml(p.googleRating)}</span></span>
+          <span class="popup-rating-pill">🟢 TripAdvisor ${p.tripRating} <span style="color:#f5a623">${starsHtml(p.tripRating)}</span></span>
+          <span class="popup-rating-pill">⭐ Avg <strong>${avg}</strong></span>
+        </div>
+        <div class="popup-services">
+          <div class="popup-services-title">Services & Facilities</div>
+          <div class="popup-service-icons">${servicesHTML}</div>
+        </div>
+        <div class="popup-tags" style="margin-top:6px">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="popup-best">${p.best}</div>
+      </div>
+    `;
+  }
+  if (p.type === 'beach') {
+    const avg = ((p.googleRating + p.tripRating) / 2).toFixed(1);
+    const featuresHTML = p.features.map(f => `<span style="font-size:0.72rem; color:var(--text-muted)">${f}</span>`).join(' · ');
+    return `
+      <div class="popup-header beach-header">
+        <div class="popup-name">${p.icon} ${p.name}</div>
+        <div class="popup-region">${p.region}</div>
+      </div>
+      <div class="popup-body">
+        <div class="popup-desc">${p.desc}</div>
+        <div class="popup-rating-row">
+          <span class="popup-rating-pill">🟡 Google ${p.googleRating} <span style="color:#f5a623">${starsHtml(p.googleRating)}</span></span>
+          <span class="popup-rating-pill">🟢 TripAdvisor ${p.tripRating} <span style="color:#f5a623">${starsHtml(p.tripRating)}</span></span>
+          <span class="popup-rating-pill">⭐ Avg <strong>${avg}</strong></span>
+        </div>
+        <div style="margin-top:6px; font-size:0.7rem; font-weight:600; color:var(--sea)">${p.character} · ${p.organised}</div>
+        <div class="popup-services" style="margin-top:5px">
+          <div class="popup-service-icons" style="flex-wrap:wrap; gap:3px">${p.features.map(f => `<span style="font-size:0.68rem; background:#e8f4f8; color:#1a6b8a; border:1px solid #b8d8e8; border-radius:8px; padding:1px 6px">${f}</span>`).join('')}</div>
+        </div>
+        <div class="popup-tags" style="margin-top:6px">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="popup-best">${p.best}</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="popup-header">
+      <div class="popup-name">${p.icon} ${p.name}</div>
+      <div class="popup-region">${p.region}</div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-desc">${p.desc}</div>
+      <div class="popup-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+      <div class="popup-best">${p.best}</div>
+    </div>
+  `;
+}
+
+function selectPlace(p) {
+  document.querySelectorAll('.place-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById(`card-${p.id}`);
+  if (card) {
+    card.classList.add('selected');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  map.flyTo([p.lat, p.lng], 10, { duration: 1 });
+  markers[p.id].openPopup();
+}
+
+function renderList(filter) {
+  const list = document.getElementById('placeList');
+  list.innerHTML = '';
+  let filtered;
+  if (filter === 'all') filtered = allPlaces;
+  else filtered = allPlaces.filter(p => p.type === filter);
+
+  filtered.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'place-card';
+    card.id = `card-${p.id}`;
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('tabindex', '0');
+
+    let extraHTML = '';
+    if (p.type === 'camping') {
+      const avg = ((p.googleRating + p.tripRating) / 2).toFixed(1);
+      extraHTML = `
+        <div class="rating-row">
+          <span class="rating-pill"><span class="stars">${starsHtml(p.googleRating)}</span> G ${p.googleRating}</span>
+          <span class="rating-pill"><span class="stars">${starsHtml(p.tripRating)}</span> TA ${p.tripRating}</span>
+          <span class="rating-pill">⭐ ${avg} avg</span>
+        </div>
+        <div class="services-row" style="margin-top:5px">
+          ${p.services.map(s => `<span class="service-icon" title="${s.label}">${s.icon}</span>`).join('')}
+        </div>
+      `;
+    } else if (p.type === 'beach') {
+      const avg = ((p.googleRating + p.tripRating) / 2).toFixed(1);
+      extraHTML = `
+        <div class="rating-row">
+          <span class="rating-pill"><span class="stars">${starsHtml(p.googleRating)}</span> G ${p.googleRating}</span>
+          <span class="rating-pill"><span class="stars">${starsHtml(p.tripRating)}</span> TA ${p.tripRating}</span>
+          <span class="rating-pill">⭐ ${avg} avg</span>
+        </div>
+        <div style="margin-top:4px; font-size:0.68rem; font-weight:500; color:var(--sea)">${p.character} · <span style="color:var(--text-muted)">${p.organised}</span></div>
+        <div class="services-row" style="margin-top:4px">
+          ${p.features.map(f => `<span style="font-size:0.65rem; background:#e8f4f8; color:#1a6b8a; border:1px solid #b8d8e8; border-radius:8px; padding:1px 5px">${f}</span>`).join('')}
+        </div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="place-icon" aria-hidden="true">${p.icon}</div>
+      <div class="place-info">
+        <div class="place-name">${p.name}${p.type === 'camping' ? '<span class="camping-badge">Camping</span>' : p.type === 'beach' ? '<span class="beach-badge">Beach</span>' : ''}</div>
+        <div class="place-region">${p.region}</div>
+        <div class="place-desc">${p.desc}</div>
+        ${extraHTML}
+        <div class="place-tags" style="margin-top:5px">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => selectPlace(p));
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') selectPlace(p); });
+    list.appendChild(card);
+  });
+}
+
+function filterPlaces(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderList(type);
+
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  let filtered;
+  if (type === 'all') filtered = allPlaces;
+  else filtered = allPlaces.filter(p => p.type === type);
+  filtered.forEach(p => markers[p.id].addTo(map));
+}
+
+// Add markers for all places
+allPlaces.forEach(p => {
+  const isCamping = p.type === 'camping';
+  const isBeach = p.type === 'beach';
+  const marker = L.marker([p.lat, p.lng], { icon: makeIcon(p.icon, false, isCamping, isBeach) })
+    .bindPopup(makePopupHTML(p), {
+      className: 'custom-popup',
+      maxWidth: (isCamping || isBeach) ? 290 : 260,
+      minWidth: (isCamping || isBeach) ? 270 : 240
+    });
+
+  marker.on('click', () => {
+    document.querySelectorAll('.place-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById(`card-${p.id}`);
+    if (card) {
+      card.classList.add('selected');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  marker.addTo(map);
+  markers[p.id] = marker;
+});
+
+// Initial render
+renderList('all');
+</script>
+</body>
+</html>
